@@ -374,7 +374,12 @@ async function sbGet(key) {
     headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY}
   });
   const rows = await r.json();
-  return rows && rows[0] ? rows[0].data_value : null;
+  if(!rows || !rows[0]) return null;
+  const val = rows[0].data_value;
+  if(typeof val === 'string'){
+    try{return JSON.parse(val);}catch(e){return val;}
+  }
+  return val;
 }
 
 async function sbSet(key, value) {
