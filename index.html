@@ -383,12 +383,21 @@ async function sbGet(key) {
 }
 
 async function sbSet(key, value) {
-  await fetch(`${SB_URL}/rest/v1/checklist_data`, {
-    method: 'POST',
-    headers: {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY,
-      'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates'},
-    body: JSON.stringify({user_id: USER_ID, data_key: key, data_value: value, updated_at: new Date().toISOString()})
+  const body = JSON.stringify({user_id: USER_ID, data_key: key, data_value: value, updated_at: new Date().toISOString()});
+  const headers = {'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json'};
+  // tenta PATCH primeiro (atualizar linha existente)
+  const patch = await fetch(`${SB_URL}/rest/v1/checklist_data?user_id=eq.${USER_ID}&data_key=eq.${key}`, {
+    method: 'PATCH', headers, body
   });
+  if(patch.ok && patch.status !== 404){
+    const text = await patch.text();
+    // se não atualizou nenhuma linha, insere
+    if(text === '[]' || text === '' || text === 'null'){
+      await fetch(`${SB_URL}/rest/v1/checklist_data`, {method: 'POST', headers, body});
+    }
+    return;
+  }
+  await fetch(`${SB_URL}/rest/v1/checklist_data`, {method: 'POST', headers, body});
 }
 
 // ═══════════════════════════════════════════
